@@ -57,7 +57,15 @@
         .markdown-content ul, .markdown-content ol { margin-left: 1.5rem; margin-bottom: 0.75rem; }
         .markdown-content ul { list-style-type: disc; } .markdown-content ol { list-style-type: decimal; }
         .markdown-content li { margin-bottom: 0.25rem; }
-        .markdown-content table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; display: table; } /* Changed for better resizing */
+        /* FIX: Table styling for horizontal scrolling on mobile */
+        .markdown-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 1rem;
+            display: block; /* Use block display to allow overflow */
+            overflow-x: auto; /* Enable horizontal scrolling */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        }
         .markdown-content th, .markdown-content td { border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; }
         .markdown-content th { background-color: #f3f4f6; font-weight: 600; }
         .markdown-content blockquote { border-left: 4px solid #d1d5db; padding-left: 1rem; margin-left: 0; color: #4b5563; }
@@ -164,10 +172,12 @@
           try {
             const response = await fetch(`${GAS_WEB_APP_URL}?action=getPrompt&assistant=${encodeURIComponent(assistantName)}`);
             const data = await response.json();
+             // Check for success and if the prompt is not an empty string
             if (data.success && data.prompt && data.prompt.trim() !== '') {
               this.cache[assistantName] = data.prompt;
               return data.prompt;
             }
+             // If prompt is empty or not successful, return null
             return null;
           } catch (error) {
             console.error(`Error fetching prompt for ${assistantName}:`, error);
@@ -320,7 +330,6 @@
             if (textarea) {
                 textarea.style.height = 'auto';
                 textarea.style.height = `${textarea.scrollHeight}px`;
-                // Fix for mobile textarea scrolling
                 const stopTouchPropagation = (e) => e.stopPropagation();
                 textarea.addEventListener('touchmove', stopTouchPropagation);
                 return () => textarea.removeEventListener('touchmove', stopTouchPropagation);
@@ -467,7 +476,7 @@
                     });
                     const systemMessage = selectedProvider.key === 'anthropic' ? { system: systemPrompt } : { messages: [{role: 'system', content: systemPrompt}, ...messages] };
                     const requestMessages = selectedProvider.key === 'anthropic' ? { messages } : {};
-                    
+
                     requestBody = JSON.stringify({
                         model: selectedModel.name,
                         ...systemMessage,
@@ -513,7 +522,7 @@
                                         }
                                         return newHistory;
                                     });
-                                }
+                                 }
                             } catch (e) { /* Ignore parsing errors */ }
                         }
                     }
@@ -562,8 +571,26 @@
             } catch (err) { setError('Could not read custom prompt file.'); }
         };
 
+        // FIX: This function now clears the chat history for the new assistant
+        // to ensure the intro message is always triggered on selection.
         const handlePromptSelectionChange = (e) => {
-            if (e.target.value) window.location.href = e.target.value;
+            if (e.target.value) {
+                try {
+                    // Construct a full URL to easily parse the search parameters
+                    const url = new URL(e.target.value, window.location.origin);
+                    const newAssistantKey = url.searchParams.get('assistant');
+
+                    // If we successfully find the new assistant's key, clear its history
+                    if (newAssistantKey) {
+                        const chatKey = `chatHistory_${newAssistantKey}`;
+                        localStorage.removeItem(chatKey);
+                    }
+                } catch (error) {
+                    console.error("Could not parse URL from selection:", e.target.value, error);
+                }
+                // Navigate to the new URL to reload the component for the new assistant
+                window.location.href = e.target.value;
+            }
         };
 
         const clearChat = () => {
@@ -580,7 +607,7 @@
                 container.scrollBy({ top: direction === 'up' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
             }
         };
-        
+
         const startResizing = useCallback((mouseDownEvent) => {
             const handleMouseMove = (mouseMoveEvent) => {
                 const newWidth = mouseDownEvent.clientX + (mouseMoveEvent.clientX - mouseDownEvent.clientX);
@@ -686,11 +713,13 @@
                     <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 relative">
                         <div className="space-y-6 max-w-4xl mx-auto">
                             {chatHistory.map((msg, index) => (
-                                <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                                // FIX: Added w-full to make the message row take up the full container width
+                                <div key={index} className={`flex w-full items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                                     {msg.role !== 'user' && (
                                         <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">AI</div>
                                     )}
-                                    <div className={`p-4 rounded-lg max-w-full overflow-x-hidden ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
+                                    {/* FIX: Removed overflow-x-hidden and added conditional widths for user vs AI bubbles */}
+                                    <div className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-indigo-600 text-white max-w-[90%]' : 'bg-white border border-slate-200 w-full'}`}>
                                         {msg.file && (
                                             <div className="mb-2 p-2 bg-indigo-500 rounded-md inline-block">
                                                 {msg.file.previewUrl ? <img src={msg.file.previewUrl} className="max-w-xs rounded-md"/> : <div className="flex items-center gap-2 p-2"><FileIcon className="w-6 h-6"/><span>{msg.file.name}</span></div>}
