@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- SEO and Sharing Meta Tags -->
     <title>AI Educational Assistant</title>
@@ -43,6 +43,8 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* FIX: Ensure html/body/root take full height to make flexbox work reliably */
+        html, body, #root { height: 100%; }
         body { font-family: 'Inter', sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -88,87 +90,6 @@
             min-height: 48px;
             height: 48px;
         }
-
-        /* Mobile fixes */
-        .mobile-layout {
-            height: 100vh;
-            height: 100dvh; /* Dynamic viewport height for better mobile support */
-            position: relative;
-        }
-
-        .mobile-header {
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            background: white;
-        }
-
-        .mobile-main {
-            flex: 1;
-            min-height: 0;
-            padding-bottom: env(safe-area-inset-bottom, 0);
-        }
-
-        .mobile-footer {
-            position: sticky;
-            bottom: 0;
-            z-index: 20;
-            background: white;
-            padding-bottom: env(safe-area-inset-bottom, 0);
-        }
-
-        .mobile-scroll-controls {
-            position: fixed;
-            bottom: calc(80px + env(safe-area-inset-bottom, 0));
-            right: 16px;
-            z-index: 25;
-            transition: transform 0.3s ease;
-        }
-
-        /* Hide scroll controls when keyboard is visible on mobile */
-        @media (max-height: 600px) and (max-width: 768px) {
-            .mobile-scroll-controls {
-                transform: translateY(-60px);
-            }
-        }
-
-        /* Better mobile scrolling for sidebar */
-        .mobile-sidebar {
-            height: 100vh;
-            height: 100dvh;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .mobile-sidebar-content {
-            max-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
-            max-height: calc(100dvh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Ensure proper touch scrolling */
-        .touch-scroll {
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-        }
-
-        /* Better input handling on mobile */
-        @media (max-width: 768px) {
-            .mobile-input-container {
-                padding-bottom: env(keyboard-inset-height, 0);
-            }
-        }
-
-        /* Support for iOS safe areas */
-        @supports (padding: max(0px)) {
-            .mobile-layout {
-                padding-top: env(safe-area-inset-top, 0);
-                padding-bottom: env(safe-area-inset-bottom, 0);
-                padding-left: env(safe-area-inset-left, 0);
-                padding-right: env(safe-area-inset-right, 0);
-            }
-        }
     </style>
 </head>
 <body class="bg-slate-100">
@@ -206,6 +127,7 @@
             throw new Error(data.error || 'Failed to fetch assistants');
           } catch (error) {
             console.error('Error fetching assistants:', error);
+            // Fallback list in case of network error
             return [
               "Item Writer", "Lesson Notes Generator", "Lesson Plans (with Biblical values)", "Lesson Plans (no Biblical values)",
               "Mark Scheme Generator", "Scheme of Work (with Biblical values)", "Scheme of Work (no Biblical values)",
@@ -271,7 +193,6 @@
         const [availableAssistants, setAvailableAssistants] = useState([]);
         const [isLoadingAssistants, setIsLoadingAssistants] = useState(true);
         const [navigationMenu, setNavigationMenu] = useState({});
-        const [isMobile, setIsMobile] = useState(false);
 
         const chatContainerRef = useRef(null);
         const chatEndRef = useRef(null);
@@ -280,16 +201,6 @@
         const selectedProvider = AI_PROVIDERS.find(p => p.key === selectedProviderKey);
         const selectedModel = selectedProvider?.models.find(m => m.name === selectedModelName);
         const isFileUploadDisabled = !selectedModel?.vision;
-
-        // Check if device is mobile
-        useEffect(() => {
-            const checkMobile = () => {
-                setIsMobile(window.innerWidth <= 768);
-            };
-            checkMobile();
-            window.addEventListener('resize', checkMobile);
-            return () => window.removeEventListener('resize', checkMobile);
-        }, []);
 
         useEffect(() => {
             const initializeAssistants = async () => {
@@ -327,12 +238,11 @@
                     return;
                 }
 
-                // FIX: Fetch prompt *before* deciding what to display.
                 const promptContent = await PromptManager.getPromptContent(currentPromptKey);
 
                 if (!promptContent) {
                     setIsPromptMissing(true);
-                    setChatHistory([]); // Ensure no old/loading chat is shown
+                    setChatHistory([]);
                 } else {
                     setIsPromptMissing(false);
                     let finalMessage = `${currentPromptKey} assistant is ready. How can I assist you?`;
@@ -368,40 +278,6 @@
                 textarea.style.height = `${textarea.scrollHeight}px`;
             }
         }, [userInput]);
-
-        // Mobile keyboard handling
-        useEffect(() => {
-            if (!isMobile) return;
-
-            const handleResize = () => {
-                // Force a re-render to adjust layout when keyboard appears/disappears
-                setTimeout(() => {
-                    if (chatEndRef.current) {
-                        chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                    }
-                }, 100);
-            };
-
-            const handleFocus = () => {
-                setTimeout(() => {
-                    if (userInputRef.current) {
-                        userInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 300);
-            };
-
-            window.addEventListener('resize', handleResize);
-            if (userInputRef.current) {
-                userInputRef.current.addEventListener('focus', handleFocus);
-            }
-
-            return () => {
-                window.removeEventListener('resize', handleResize);
-                if (userInputRef.current) {
-                    userInputRef.current.removeEventListener('focus', handleFocus);
-                }
-            };
-        }, [isMobile]);
 
         const processFileForApi = (file) => {
             return new Promise((resolve, reject) => {
@@ -600,59 +476,62 @@
         }
 
         return (
-            <div className={`h-screen w-screen overflow-hidden flex bg-white ${isMobile ? 'mobile-layout' : ''}`}>
-                <div className={`fixed top-0 left-0 z-40 h-full w-80 bg-slate-800 text-white flex flex-col transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:static ${isMobile ? 'mobile-sidebar' : ''}`}>
-                    <div className={`flex-1 flex flex-col min-h-0 ${isMobile ? 'mobile-sidebar-content' : ''}`}>
-                        <div className="flex justify-between items-center p-4 flex-shrink-0">
-                             <h1 className="text-2xl font-bold">Settings</h1>
-                             <button onClick={() => setIsMenuOpen(false)} className="lg:hidden p-1 text-slate-400 hover:text-white"><XIcon className="w-6 h-6"/></button>
+            /* FIX: The main container is now a flex row that takes up the full screen height */
+            <div className="h-full w-full overflow-hidden flex bg-white">
+                {/* FIX: The sidebar is now a flex column to manage its own scrolling */ }
+                <div className={`fixed top-0 left-0 z-40 h-full w-80 bg-slate-800 text-white flex flex-col transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:static`}>
+                    <div className="flex justify-between items-center p-4 flex-shrink-0">
+                         <h1 className="text-2xl font-bold">Settings</h1>
+                         <button onClick={() => setIsMenuOpen(false)} className="lg:hidden p-1 text-slate-400 hover:text-white"><XIcon className="w-6 h-6"/></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-5">
+                        <div>
+                            <label className="text-sm text-slate-400">Select an Assistant</label>
+                            <select onChange={handlePromptSelectionChange} value={navigationMenu[activePromptKey] || ""} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                {availableAssistants.map(assistant => (
+                                    <option key={assistant} value={navigationMenu[assistant]}>{assistant}</option>
+                                ))}
+                                {activePromptKey === 'custom' && <option value="">Custom Prompt</option>}
+                            </select>
+                             <label htmlFor="custom-prompt-upload" className="mt-2 text-sm text-indigo-400 hover:text-indigo-300 cursor-pointer block text-center py-2 border border-dashed border-slate-600 rounded-md hover:border-indigo-500 transition-colors">Upload Custom Prompt</label>
+                            <input id="custom-prompt-upload" type="file" className="hidden" accept=".txt,.json" onChange={handleCustomPromptUpload} />
                         </div>
-                        <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 space-y-5 ${isMobile ? 'touch-scroll' : ''}`}>
-                            <div>
-                                <label className="text-sm text-slate-400">Select an Assistant</label>
-                                <select onChange={handlePromptSelectionChange} value={navigationMenu[activePromptKey] || ""} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                    {availableAssistants.map(assistant => (
-                                        <option key={assistant} value={navigationMenu[assistant]}>{assistant}</option>
-                                    ))}
-                                    {activePromptKey === 'custom' && <option value="">Custom Prompt</option>}
-                                </select>
-                                 <label htmlFor="custom-prompt-upload" className="mt-2 text-sm text-indigo-400 hover:text-indigo-300 cursor-pointer block text-center py-2 border border-dashed border-slate-600 rounded-md hover:border-indigo-500 transition-colors">Upload Custom Prompt</label>
-                                <input id="custom-prompt-upload" type="file" className="hidden" accept=".txt,.json" onChange={handleCustomPromptUpload} />
-                            </div>
-                            <div>
-                                <label className="text-sm text-slate-400">AI Provider</label>
-                                <select value={selectedProviderKey} onChange={handleProviderChange} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                    {AI_PROVIDERS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-sm text-slate-400">AI Model</label>
-                                <select value={selectedModelName} onChange={(e) => setSelectedModelName(e.target.value)} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                    {selectedProvider?.models.map(model => <option key={model.name} value={model.name}>{model.name} {model.vision ? '📸' : ''}</option>)}
-                                </select>
-                            </div>
-                             <div>
-                                <label className="text-sm text-slate-400">{selectedProvider?.label} API Key</label>
-                                <input type="password" value={apiKeys[selectedProvider?.apiKeyName] || ''} onChange={(e) => handleApiKeyChange(selectedProvider.apiKeyName, e.target.value)} placeholder={`Paste your ${selectedProvider?.label} key here`} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                                <a href={selectedProvider?.apiKeyUrl} target="_blank" className="text-xs text-indigo-400 hover:underline mt-1 block">Get your key here &raquo;</a>
-                            </div>
-                            <div><label className="text-sm text-slate-400">Auto-delete Chat</label><select value={autoDeleteHours} onChange={(e) => setAutoDeleteHours(e.target.value)} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"><option value="1">After 1 Hour</option><option value="2">After 2 Hours</option><option value="24">After 24 Hours</option><option value="never">Never</option></select></div>
+                        <div>
+                            <label className="text-sm text-slate-400">AI Provider</label>
+                            <select value={selectedProviderKey} onChange={handleProviderChange} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                {AI_PROVIDERS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+                            </select>
                         </div>
-                        <div className="p-4 mt-auto space-y-4 flex-shrink-0 border-t border-slate-700">
-                             <a href={window.location.pathname} className="flex items-center justify-center gap-2 w-full text-center py-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"><HomeIcon className="w-5 h-5"/>Return to Home</a>
-                             <p className="text-xs text-slate-500 text-center">A Project by Derrick Musamali</p>
+                        <div>
+                            <label className="text-sm text-slate-400">AI Model</label>
+                            <select value={selectedModelName} onChange={(e) => setSelectedModelName(e.target.value)} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                {selectedProvider?.models.map(model => <option key={model.name} value={model.name}>{model.name} {model.vision ? '📸' : ''}</option>)}
+                            </select>
                         </div>
+                         <div>
+                            <label className="text-sm text-slate-400">{selectedProvider?.label} API Key</label>
+                            <input type="password" value={apiKeys[selectedProvider?.apiKeyName] || ''} onChange={(e) => handleApiKeyChange(selectedProvider.apiKeyName, e.target.value)} placeholder={`Paste your ${selectedProvider?.label} key here`} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                            <a href={selectedProvider?.apiKeyUrl} target="_blank" className="text-xs text-indigo-400 hover:underline mt-1 block">Get your key here &raquo;</a>
+                        </div>
+                        <div><label className="text-sm text-slate-400">Auto-delete Chat</label><select value={autoDeleteHours} onChange={(e) => setAutoDeleteHours(e.target.value)} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"><option value="1">After 1 Hour</option><option value="2">After 2 Hours</option><option value="24">After 24 Hours</option><option value="never">Never</option></select></div>
+                    </div>
+                    <div className="p-4 flex-shrink-0 border-t border-slate-700">
+                         <a href={window.location.pathname} className="flex items-center justify-center gap-2 w-full text-center py-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"><HomeIcon className="w-5 h-5"/>Return to Home</a>
+                         <p className="text-xs text-slate-500 text-center mt-4">A Project by Derrick Musamali</p>
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col overflow-hidden relative">
-                    <header className={`p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0 bg-white z-10 ${isMobile ? 'mobile-header' : ''}`}>
+                {/* FIX: The main content area is now a flex column that takes up all available space. */}
+                <div className="flex-1 flex flex-col h-full overflow-hidden">
+                    {/* FIX: Header is set to not shrink */}
+                    <header className="p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0 bg-white z-10">
                         <button onClick={() => setIsMenuOpen(true)} className="p-1 text-slate-600 hover:text-slate-900 lg:hidden"><MenuIcon className="w-6 h-6" /></button>
                         <h2 className="text-xl font-semibold text-slate-800 text-center flex-1">{activePromptKey} Assistant</h2>
                         <button onClick={clearChat} title="Clear chat history and reset" className="p-2 rounded-full hover:bg-slate-200"><TrashIcon className="w-5 h-5 text-slate-500"/></button>
                     </header>
 
-                    <main ref={chatContainerRef} className={`flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 ${isMobile ? 'mobile-main touch-scroll' : ''}`}>
+                    {/* FIX: Main chat area grows to fill space and scrolls internally */}
+                    <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 relative">
                         <div className="space-y-6 max-w-4xl mx-auto">{chatHistory.map((msg, index) => <div key={index} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>{msg.role !== 'user' && <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">AI</div>}<div className={`p-4 rounded-lg max-w-full overflow-x-hidden ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
                         {msg.file && (
                              <div className="mb-2 p-2 bg-indigo-500 rounded-md inline-block">
@@ -660,11 +539,18 @@
                              </div>
                         )}
                         <MarkdownRenderer content={msg.content} isLoading={msg.isLoading} />
-                    </div></div>)}<div ref={chatEndRef} /></div></main>
+                    </div></div>)}<div ref={chatEndRef} /></div>
+                        {/* The scroll arrows are inside the main scrollable container, so they will always be visible relative to it */}
+                        <div className="sticky bottom-4 right-4 float-right space-y-2">
+                            <button onClick={() => handleScroll('up')} className="p-2 rounded-full bg-black bg-opacity-40 text-white hover:bg-opacity-60 transition-opacity"><ChevronUpIcon className="w-5 h-5"/></button>
+                            <button onClick={() => handleScroll('down')} className="p-2 rounded-full bg-black bg-opacity-40 text-white hover:bg-opacity-60 transition-opacity"><ChevronDownIcon className="w-5 h-5"/></button>
+                        </div>
+                    </main>
 
                     {error && <div className="p-4 bg-red-100 text-red-700 border-t border-red-200 flex-shrink-0">{error}</div>}
-
-                    <footer className={`p-4 border-t border-slate-200 bg-white flex-shrink-0 ${isMobile ? 'mobile-footer mobile-input-container' : ''}`}>
+                    
+                    {/* FIX: Footer is set to not shrink */}
+                    <footer className="p-4 border-t border-slate-200 bg-white flex-shrink-0">
                         <div className="relative max-w-4xl mx-auto">
                             {pendingFile && <div className="absolute bottom-full left-0 mb-2 max-w-md p-2"><div className="flex items-start gap-2 bg-slate-200 text-slate-700 rounded-lg p-2 text-sm">
                                 {pendingFilePreview ? <img src={pendingFilePreview} alt="Preview" className="w-16 h-16 object-cover rounded-md"/> : <FileIcon className="w-12 h-12 text-slate-500 shrink-0"/>}
@@ -681,11 +567,6 @@
                             </div>
                         </div>
                     </footer>
-
-                    <div className={`absolute space-y-2 ${isMobile ? 'mobile-scroll-controls' : 'bottom-24 right-4'}`}>
-                        <button onClick={() => handleScroll('up')} className="p-2 rounded-full bg-black bg-opacity-40 text-white hover:bg-opacity-60 transition-opacity"><ChevronUpIcon className="w-5 h-5"/></button>
-                        <button onClick={() => handleScroll('down')} className="p-2 rounded-full bg-black bg-opacity-60 text-white hover:bg-opacity-60 transition-opacity"><ChevronDownIcon className="w-5 h-5"/></button>
-                    </div>
                 </div>
             </div>
         );
