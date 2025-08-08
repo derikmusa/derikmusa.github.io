@@ -45,7 +45,8 @@
     <style>
         /* Base styles */
         html, body, #root { height: 100%; }
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; } /* Prevent body scroll */
+        #root { overflow-y: auto; } /* Allow root to scroll if needed */
         /* Custom scrollbar for a cleaner look */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -57,16 +58,15 @@
         .markdown-content ul, .markdown-content ol { margin-left: 1.5rem; margin-bottom: 0.75rem; }
         .markdown-content ul { list-style-type: disc; } .markdown-content ol { list-style-type: decimal; }
         .markdown-content li { margin-bottom: 0.25rem; }
-        /* FIX: Table styling for horizontal scrolling on mobile */
         .markdown-content table {
             border-collapse: collapse;
             width: 100%;
             margin-bottom: 1rem;
-            display: block; /* Use block display to allow overflow */
-            overflow-x: auto; /* Enable horizontal scrolling */
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
-        .markdown-content th, .markdown-content td { border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; }
+        .markdown-content th, .markdown-content td { border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; white-space: nowrap; }
         .markdown-content th { background-color: #f3f4f6; font-weight: 600; }
         .markdown-content blockquote { border-left: 4px solid #d1d5db; padding-left: 1rem; margin-left: 0; color: #4b5563; }
         .markdown-content code { background-color: #e5e7eb; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-family: monospace; }
@@ -87,7 +87,7 @@
         /* Loading spinner for API calls */
         .loading-spinner {
             display: inline-block;
-            width: 16px; /* smaller for inline use */
+            width: 16px;
             height: 16px;
             border: 2px solid #e5e7eb;
             border-top: 2px solid #4f46e5;
@@ -141,6 +141,9 @@
       const MoreVerticalIcon = (props) => <Icon {...props} C={<><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></>} />;
       const CheckCircleIcon = (props) => <Icon {...props} C={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />;
       const AlertCircleIcon = (props) => <Icon {...props} C={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+      const PhoneIcon = (props) => <Icon {...props} C={<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>} />;
+      const MailIcon = (props) => <Icon {...props} C={<><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>} />;
+      const MessageSquareIcon = (props) => <Icon {...props} C={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>} />;
 
 
       // --- CONFIGURATION ---
@@ -172,12 +175,10 @@
           try {
             const response = await fetch(`${GAS_WEB_APP_URL}?action=getPrompt&assistant=${encodeURIComponent(assistantName)}`);
             const data = await response.json();
-             // Check for success and if the prompt is not an empty string
             if (data.success && data.prompt && data.prompt.trim() !== '') {
               this.cache[assistantName] = data.prompt;
               return data.prompt;
             }
-             // If prompt is empty or not successful, return null
             return null;
           } catch (error) {
             console.error(`Error fetching prompt for ${assistantName}:`, error);
@@ -241,12 +242,15 @@
         const [navigationMenu, setNavigationMenu] = useState({});
         const [openMenuIndex, setOpenMenuIndex] = useState(null);
         const [showCopyToast, setShowCopyToast] = useState(false);
+        // NEW: State for the API key invalid toast
+        const [apiKeyToast, setApiKeyToast] = useState('');
 
         // --- REFS ---
         const chatContainerRef = useRef(null);
         const chatEndRef = useRef(null);
         const userInputRef = useRef(null);
         const validationTimeoutRef = useRef(null);
+        const apiKeyToastTimeoutRef = useRef(null);
 
         // --- DERIVED STATE ---
         const selectedProvider = AI_PROVIDERS.find(p => p.key === selectedProviderKey);
@@ -347,6 +351,7 @@
                 return;
             }
             setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'checking' }));
+            let isValid = false;
             try {
                 let response;
                 if (provider.key === 'google') {
@@ -361,13 +366,21 @@
                     });
                 }
                 if (response.ok) {
+                    isValid = true;
                     setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'valid' }));
-                } else {
-                    setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'invalid' }));
                 }
             } catch (error) {
-                setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'invalid' }));
+                // Error during fetch
             }
+            
+            if (!isValid) {
+                setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'invalid' }));
+                // NEW: Trigger the toast notification
+                setApiKeyToast(`Invalid ${provider.label} API Key`);
+                if (apiKeyToastTimeoutRef.current) clearTimeout(apiKeyToastTimeoutRef.current);
+                apiKeyToastTimeoutRef.current = setTimeout(() => setApiKeyToast(''), 3000);
+            }
+
         }, []);
 
         const handleApiKeyChange = (keyName, provider, value) => {
@@ -410,16 +423,18 @@
                 setError("Failed to copy text to clipboard.");
             }
             document.body.removeChild(textArea);
-            setOpenMenuIndex(null); // Close menu after copy
+            setOpenMenuIndex(null);
         };
 
         const handleSendMessage = async () => {
+            // FIX: API key check now happens *before* any state is changed.
+            // This prevents the user's message from disappearing on error.
             const apiKey = apiKeys[selectedProvider.apiKeyName];
             if ((!userInput.trim() && !pendingFile) || isLoading) return;
-            if (!apiKey || apiKeyStatus[selectedProvider.key] === 'invalid') {
+            if (!apiKey || apiKeyStatus[selectedProvider.key] !== 'valid') {
                 setError(`Please enter a valid ${selectedProvider.label} API Key in the settings panel.`);
                 setIsMenuOpen(true);
-                return;
+                return; // Exit early, leaving the user's input intact.
             }
 
             setIsLoading(true);
@@ -429,10 +444,15 @@
             if (pendingFile && !isFileUploadDisabled) {
                 try {
                     fileDataForApi = await processFileForApi(pendingFile);
-                } catch(e) { setError("Could not read file."); setIsLoading(false); return; }
+                } catch(e) { 
+                    setError("Could not read file."); 
+                    setIsLoading(false); 
+                    return; 
+                }
             }
 
             const userMessage = { role: 'user', content: userInput, file: pendingFile ? { name: pendingFile.name, previewUrl: pendingFilePreview } : null, fileDataForApi };
+            // Now we update the history and clear the input, since the key is valid.
             const newHistory = [...chatHistory, userMessage, { role: 'assistant', content: '', isLoading: true }];
             setChatHistory(newHistory);
             setUserInput(''); setPendingFile(null); setPendingFilePreview(null);
@@ -440,7 +460,7 @@
             let systemPrompt = activePromptKey === 'custom' ? customPromptContent : await PromptManager.getPromptContent(activePromptKey);
             if (!systemPrompt) {
                 setError('Failed to load assistant configuration. Please try again.');
-                setChatHistory(prev => prev.slice(0, -2));
+                setChatHistory(prev => prev.slice(0, -1)); // Remove only the loading message
                 setIsLoading(false);
                 return;
             }
@@ -482,7 +502,7 @@
                         ...systemMessage,
                         ...requestMessages,
                         stream: true,
-                        max_tokens: 4096 // Required for Claude
+                        max_tokens: 4096
                     });
                 }
 
@@ -511,7 +531,7 @@
                                 const data = JSON.parse(dataStr);
                                 let textChunk = '';
                                 if (selectedProvider.key === 'google') textChunk = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                                else textChunk = data.choices?.[0]?.delta?.content || data.delta?.text || ''; // Support for Anthropic delta
+                                else textChunk = data.choices?.[0]?.delta?.content || data.delta?.text || '';
 
                                 if (textChunk) {
                                     setChatHistory(prev => {
@@ -530,7 +550,7 @@
 
             } catch (err) {
                 setError(err.message);
-                setChatHistory(prev => prev.slice(0, -2));
+                setChatHistory(prev => prev.slice(0, -1)); // On error, remove the loading bubble
             } finally {
                 setChatHistory(prev => {
                     const newHistory = [...prev];
@@ -571,16 +591,11 @@
             } catch (err) { setError('Could not read custom prompt file.'); }
         };
 
-        // FIX: This function now clears the chat history for the new assistant
-        // to ensure the intro message is always triggered on selection.
         const handlePromptSelectionChange = (e) => {
             if (e.target.value) {
                 try {
-                    // Construct a full URL to easily parse the search parameters
                     const url = new URL(e.target.value, window.location.origin);
                     const newAssistantKey = url.searchParams.get('assistant');
-
-                    // If we successfully find the new assistant's key, clear its history
                     if (newAssistantKey) {
                         const chatKey = `chatHistory_${newAssistantKey}`;
                         localStorage.removeItem(chatKey);
@@ -588,7 +603,6 @@
                 } catch (error) {
                     console.error("Could not parse URL from selection:", e.target.value, error);
                 }
-                // Navigate to the new URL to reload the component for the new assistant
                 window.location.href = e.target.value;
             }
         };
@@ -611,7 +625,7 @@
         const startResizing = useCallback((mouseDownEvent) => {
             const handleMouseMove = (mouseMoveEvent) => {
                 const newWidth = mouseDownEvent.clientX + (mouseMoveEvent.clientX - mouseDownEvent.clientX);
-                if (newWidth > 280 && newWidth < 800) { // Set min and max width
+                if (newWidth > 280 && newWidth < 800) {
                     setSidebarWidth(newWidth);
                 }
             };
@@ -690,13 +704,19 @@
                                         {apiKeyStatus[selectedProvider.key] === 'invalid' && <AlertCircleIcon className="w-5 h-5 text-red-500"/>}
                                     </div>
                                 </div>
-                                <a href={selectedProvider?.apiKeyUrl} target="_blank" className="text-xs text-indigo-400 hover:underline mt-1 block">Get your key here &raquo;</a>
+                                <a href={selectedProvider?.apiKeyUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:underline mt-1 block">Get your key here &raquo;</a>
                             </div>
                             <div><label className="text-sm text-slate-400">Auto-delete Chat</label><select value={autoDeleteHours} onChange={(e) => setAutoDeleteHours(e.target.value)} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"><option value="1">After 1 Hour</option><option value="2">After 2 Hours</option><option value="24">After 24 Hours</option><option value="never">Never</option></select></div>
                         </div>
-                        <div className="p-4 mt-auto space-y-4 flex-shrink-0 border-t border-slate-700">
-                             <a href={window.location.pathname} className="flex items-center justify-center gap-2 w-full text-center py-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"><HomeIcon className="w-5 h-5"/>Return to Home</a>
-                             <p className="text-xs text-slate-500 text-center">A Project by Derrick Musamali</p>
+                        {/* NEW: Contact information section */}
+                        <div className="p-4 mt-auto space-y-2 flex-shrink-0 border-t border-slate-700">
+                             <p className="text-sm text-slate-400 text-center">A Project by Derrick Musamali</p>
+                             <div className="flex justify-center items-center gap-4 text-slate-400">
+                                <a href="tel:+256750470234" title="Call" className="hover:text-white"><PhoneIcon className="w-5 h-5"/></a>
+                                <a href="https://wa.me/256750470234" target="_blank" rel="noopener noreferrer" title="WhatsApp" className="hover:text-white"><MessageSquareIcon className="w-5 h-5"/></a>
+                                <a href="mailto:musadrk2@gmail.com" title="Email" className="hover:text-white"><MailIcon className="w-5 h-5"/></a>
+                             </div>
+                             <a href={window.location.pathname} className="flex items-center justify-center gap-2 w-full text-center mt-2 py-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors"><HomeIcon className="w-5 h-5"/>Return to Home</a>
                         </div>
                     </div>
                     <div onMouseDown={startResizing} className="resize-handle hidden lg:block"></div>
@@ -713,12 +733,10 @@
                     <main ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50 relative">
                         <div className="space-y-6 max-w-4xl mx-auto">
                             {chatHistory.map((msg, index) => (
-                                // FIX: Added w-full to make the message row take up the full container width
                                 <div key={index} className={`flex w-full items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                                     {msg.role !== 'user' && (
                                         <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">AI</div>
                                     )}
-                                    {/* FIX: Removed overflow-x-hidden and added conditional widths for user vs AI bubbles */}
                                     <div className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-indigo-600 text-white max-w-[90%]' : 'bg-white border border-slate-200 w-full'}`}>
                                         {msg.file && (
                                             <div className="mb-2 p-2 bg-indigo-500 rounded-md inline-block">
@@ -794,10 +812,17 @@
                     </footer>
                 </div>
 
-                {/* --- TOAST NOTIFICATION for Copy --- */}
+                {/* --- TOAST NOTIFICATIONS --- */}
                 {showCopyToast && (
                     <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg z-50">
                         Copied to clipboard!
+                    </div>
+                )}
+                {/* NEW: API Key Invalid Toast */}
+                {apiKeyToast && (
+                    <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2">
+                        <AlertCircleIcon className="w-5 h-5"/>
+                        <span>{apiKeyToast}</span>
                     </div>
                 )}
             </div>
