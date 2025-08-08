@@ -57,7 +57,7 @@
         .markdown-content ul, .markdown-content ol { margin-left: 1.5rem; margin-bottom: 0.75rem; }
         .markdown-content ul { list-style-type: disc; } .markdown-content ol { list-style-type: decimal; }
         .markdown-content li { margin-bottom: 0.25rem; }
-        .markdown-content table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; display: block; overflow-x: auto; white-space: nowrap; }
+        .markdown-content table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; display: table; } /* Changed for better resizing */
         .markdown-content th, .markdown-content td { border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; }
         .markdown-content th { background-color: #f3f4f6; font-weight: 600; }
         .markdown-content blockquote { border-left: 4px solid #d1d5db; padding-left: 1rem; margin-left: 0; color: #4b5563; }
@@ -79,10 +79,10 @@
         /* Loading spinner for API calls */
         .loading-spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #4f46e5;
+            width: 16px; /* smaller for inline use */
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #4f46e5;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -95,16 +95,30 @@
             min-height: 48px;
             height: 48px;
         }
+        /* Resizable sidebar handle */
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            right: -2px;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background-color: transparent;
+            z-index: 50;
+        }
+        .resize-handle:hover {
+            background-color: #4f46e5;
+        }
     </style>
 </head>
 <body class="bg-slate-100">
     <div id="root"></div>
 
     <script type="text/babel">
-      const { useState, useEffect, useRef } = React;
+      const { useState, useEffect, useRef, useCallback } = React;
 
       // --- SVG ICONS ---
-      const Icon = ({ C, ...props }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>{C}</svg>;
+      const Icon = ({ C, ...props }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>{C}</svg>;
       const SendIcon = (props) => <Icon {...props} C={<><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></>} />;
       const PaperclipIcon = (props) => <Icon {...props} C={<><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48"/></>} />;
       const FileIcon = (props) => <Icon {...props} C={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></>} />;
@@ -117,6 +131,8 @@
       const ChevronDownIcon = (props) => <Icon {...props} C={<polyline points="6 9 12 15 18 9"/>} />;
       const CopyIcon = (props) => <Icon {...props} C={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></>} />;
       const MoreVerticalIcon = (props) => <Icon {...props} C={<><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></>} />;
+      const CheckCircleIcon = (props) => <Icon {...props} C={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />;
+      const AlertCircleIcon = (props) => <Icon {...props} C={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
 
 
       // --- CONFIGURATION ---
@@ -195,6 +211,8 @@
         const getAssistantFromURL = () => new URLSearchParams(window.location.search).get('assistant') || 'Item Writer';
 
         const [apiKeys, setApiKeys] = useState({});
+        const [apiKeyStatus, setApiKeyStatus] = useState({});
+        const [sidebarWidth, setSidebarWidth] = useState(320);
         const [selectedProviderKey, setSelectedProviderKey] = useState('google');
         const [selectedModelName, setSelectedModelName] = useState('gemini-2.5-flash');
         const [autoDeleteHours, setAutoDeleteHours] = useState('2');
@@ -218,6 +236,7 @@
         const chatContainerRef = useRef(null);
         const chatEndRef = useRef(null);
         const userInputRef = useRef(null);
+        const validationTimeoutRef = useRef(null);
 
         // --- DERIVED STATE ---
         const selectedProvider = AI_PROVIDERS.find(p => p.key === selectedProviderKey);
@@ -247,6 +266,8 @@
 
             const savedState = JSON.parse(localStorage.getItem('aiAssistantState')) || {};
             setApiKeys(savedState.apiKeys || {});
+            setApiKeyStatus(savedState.apiKeyStatus || {});
+            setSidebarWidth(savedState.sidebarWidth || 320);
             setSelectedProviderKey(savedState.selectedProviderKey || 'google');
             setSelectedModelName(savedState.selectedModelName || 'gemini-2.5-flash');
             setAutoDeleteHours(savedState.autoDeleteHours || '2');
@@ -284,8 +305,8 @@
         }, [window.location.search, isLoadingAssistants]);
 
         useEffect(() => {
-            localStorage.setItem('aiAssistantState', JSON.stringify({ apiKeys, selectedProviderKey, selectedModelName, autoDeleteHours }));
-        }, [apiKeys, selectedProviderKey, selectedModelName, autoDeleteHours]);
+            localStorage.setItem('aiAssistantState', JSON.stringify({ apiKeys, apiKeyStatus, sidebarWidth, selectedProviderKey, selectedModelName, autoDeleteHours }));
+        }, [apiKeys, apiKeyStatus, sidebarWidth, selectedProviderKey, selectedModelName, autoDeleteHours]);
 
         useEffect(() => {
             if (chatHistory && chatHistory.length > 0 && !chatHistory[chatHistory.length - 1]?.isLoading) {
@@ -299,6 +320,10 @@
             if (textarea) {
                 textarea.style.height = 'auto';
                 textarea.style.height = `${textarea.scrollHeight}px`;
+                // Fix for mobile textarea scrolling
+                const stopTouchPropagation = (e) => e.stopPropagation();
+                textarea.addEventListener('touchmove', stopTouchPropagation);
+                return () => textarea.removeEventListener('touchmove', stopTouchPropagation);
             }
         }, [userInput]);
 
@@ -307,6 +332,48 @@
         }, [chatHistory[chatHistory.length - 1]?.content]);
 
         // --- HANDLERS & LOGIC ---
+        const validateApiKey = useCallback(async (provider, key) => {
+            if (!key) {
+                setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'unchecked' }));
+                return;
+            }
+            setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'checking' }));
+            try {
+                let response;
+                if (provider.key === 'google') {
+                    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                } else if (provider.key === 'openai' || provider.key === 'groq') {
+                    response = await fetch(`${provider.apiHost}/v1/models`, { headers: { 'Authorization': `Bearer ${key}` }});
+                } else if (provider.key === 'anthropic') {
+                    response = await fetch(`${provider.apiHost}/v1/messages`, {
+                        method: 'POST',
+                        headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+                        body: JSON.stringify({ model: "claude-3-haiku-20240307", max_tokens: 1, messages: [{role: "user", content: "ping"}] })
+                    });
+                }
+                if (response.ok) {
+                    setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'valid' }));
+                } else {
+                    setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'invalid' }));
+                }
+            } catch (error) {
+                setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'invalid' }));
+            }
+        }, []);
+
+        const handleApiKeyChange = (keyName, provider, value) => {
+            setApiKeys(prev => ({...prev, [keyName]: value}));
+            if (validationTimeoutRef.current) clearTimeout(validationTimeoutRef.current);
+            if (!value) {
+                 setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'unchecked' }));
+                 return;
+            }
+            setApiKeyStatus(prev => ({ ...prev, [provider.key]: 'checking' }));
+            validationTimeoutRef.current = setTimeout(() => {
+                validateApiKey(provider, value);
+            }, 800); // Debounce for 800ms
+        };
+
         const processFileForApi = (file) => {
             return new Promise((resolve, reject) => {
                 if (!file) reject("No file provided");
@@ -340,8 +407,8 @@
         const handleSendMessage = async () => {
             const apiKey = apiKeys[selectedProvider.apiKeyName];
             if ((!userInput.trim() && !pendingFile) || isLoading) return;
-            if (!apiKey) {
-                setError(`Please enter your ${selectedProvider.label} API Key in the settings panel.`);
+            if (!apiKey || apiKeyStatus[selectedProvider.key] === 'invalid') {
+                setError(`Please enter a valid ${selectedProvider.label} API Key in the settings panel.`);
                 setIsMenuOpen(true);
                 return;
             }
@@ -388,6 +455,9 @@
                 } else {
                     requestUrl = `${selectedProvider.apiHost}/v1/chat/completions`;
                     requestHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` };
+                    if (selectedProvider.key === 'anthropic') {
+                         requestHeaders = { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' };
+                    }
                     const messages = historyForApi.map(msg => {
                         const content = [{ type: 'text', text: msg.content || "" }];
                         if (msg.role === 'user' && msg.fileDataForApi) {
@@ -395,7 +465,16 @@
                         }
                         return { role: msg.role, content: content.length === 1 && content[0].type === 'text' ? content[0].text : content };
                     });
-                    requestBody = JSON.stringify({ model: selectedModel.name, messages: [{role: 'system', content: systemPrompt}, ...messages], stream: true });
+                    const systemMessage = selectedProvider.key === 'anthropic' ? { system: systemPrompt } : { messages: [{role: 'system', content: systemPrompt}, ...messages] };
+                    const requestMessages = selectedProvider.key === 'anthropic' ? { messages } : {};
+                    
+                    requestBody = JSON.stringify({
+                        model: selectedModel.name,
+                        ...systemMessage,
+                        ...requestMessages,
+                        stream: true,
+                        max_tokens: 4096 // Required for Claude
+                    });
                 }
 
                 const response = await fetch(requestUrl, { method: 'POST', headers: requestHeaders, body: requestBody });
@@ -423,7 +502,7 @@
                                 const data = JSON.parse(dataStr);
                                 let textChunk = '';
                                 if (selectedProvider.key === 'google') textChunk = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                                else textChunk = data.choices?.[0]?.delta?.content || '';
+                                else textChunk = data.choices?.[0]?.delta?.content || data.delta?.text || ''; // Support for Anthropic delta
 
                                 if (textChunk) {
                                     setChatHistory(prev => {
@@ -494,8 +573,6 @@
             window.location.reload();
         };
 
-        const handleApiKeyChange = (keyName, value) => setApiKeys(prev => ({...prev, [keyName]: value}));
-
         const handleScroll = (direction) => {
             const container = chatContainerRef.current;
             if (container) {
@@ -503,6 +580,21 @@
                 container.scrollBy({ top: direction === 'up' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
             }
         };
+        
+        const startResizing = useCallback((mouseDownEvent) => {
+            const handleMouseMove = (mouseMoveEvent) => {
+                const newWidth = mouseDownEvent.clientX + (mouseMoveEvent.clientX - mouseDownEvent.clientX);
+                if (newWidth > 280 && newWidth < 800) { // Set min and max width
+                    setSidebarWidth(newWidth);
+                }
+            };
+            const handleMouseUp = () => {
+                window.removeEventListener("mousemove", handleMouseMove);
+                window.removeEventListener("mouseup", handleMouseUp);
+            };
+            window.addEventListener("mousemove", handleMouseMove);
+            window.addEventListener("mouseup", handleMouseUp);
+        }, []);
 
         // --- RENDER ---
         if (isLoadingAssistants) {
@@ -531,7 +623,7 @@
         return (
             <div className="h-full w-full overflow-hidden flex bg-white">
                 {/* --- SIDEBAR / SETTINGS PANEL --- */}
-                <div className={`fixed top-0 left-0 z-40 h-full w-80 bg-slate-800 text-white flex flex-col transition-transform duration-300 ease-in-out transform lg:static lg:translate-x-0 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div style={{ width: `${sidebarWidth}px` }} className={`relative h-full bg-slate-800 text-white flex-col transition-transform duration-300 ease-in-out transform lg:static lg:translate-x-0 lg:flex ${isMenuOpen ? 'flex fixed top-0 left-0 z-40' : 'hidden'}`}>
                     <div className="flex-1 flex flex-col min-h-0">
                         <div className="flex justify-between items-center p-4 flex-shrink-0">
                              <h1 className="text-2xl font-bold">Settings</h1>
@@ -563,7 +655,14 @@
                             </div>
                              <div>
                                 <label className="text-sm text-slate-400">{selectedProvider?.label} API Key</label>
-                                <input type="password" value={apiKeys[selectedProvider?.apiKeyName] || ''} onChange={(e) => handleApiKeyChange(selectedProvider.apiKeyName, e.target.value)} placeholder={`Paste your ${selectedProvider?.label} key here`} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                <div className="relative">
+                                    <input type="password" value={apiKeys[selectedProvider?.apiKeyName] || ''} onChange={(e) => handleApiKeyChange(selectedProvider.apiKeyName, selectedProvider, e.target.value)} placeholder={`Paste your ${selectedProvider?.label} key here`} className="w-full mt-1 p-2 pr-8 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                                        {apiKeyStatus[selectedProvider.key] === 'checking' && <div className="loading-spinner"></div>}
+                                        {apiKeyStatus[selectedProvider.key] === 'valid' && <CheckCircleIcon className="w-5 h-5 text-green-500"/>}
+                                        {apiKeyStatus[selectedProvider.key] === 'invalid' && <AlertCircleIcon className="w-5 h-5 text-red-500"/>}
+                                    </div>
+                                </div>
                                 <a href={selectedProvider?.apiKeyUrl} target="_blank" className="text-xs text-indigo-400 hover:underline mt-1 block">Get your key here &raquo;</a>
                             </div>
                             <div><label className="text-sm text-slate-400">Auto-delete Chat</label><select value={autoDeleteHours} onChange={(e) => setAutoDeleteHours(e.target.value)} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"><option value="1">After 1 Hour</option><option value="2">After 2 Hours</option><option value="24">After 24 Hours</option><option value="never">Never</option></select></div>
@@ -573,6 +672,7 @@
                              <p className="text-xs text-slate-500 text-center">A Project by Derrick Musamali</p>
                         </div>
                     </div>
+                    <div onMouseDown={startResizing} className="resize-handle hidden lg:block"></div>
                 </div>
 
                 {/* --- MAIN CHAT INTERFACE --- */}
@@ -653,7 +753,6 @@
                                             handleSendMessage();
                                         }
                                     }}
-                                    onTouchMove={(e) => e.stopPropagation()}
                                     placeholder="Type your message or attach a file..."
                                     className="flex-1 p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none overflow-y-auto max-h-48"
                                     rows="1"
