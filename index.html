@@ -66,7 +66,6 @@
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
-        /* MODIFICATION: Changed white-space to normal and added word-break to allow table cell content to wrap */
         .markdown-content th, .markdown-content td {
             border: 1px solid #d1d5db;
             padding: 0.5rem 0.75rem;
@@ -129,12 +128,8 @@
             color: #d1d5db; /* gray-400 */
             transition: color 0.2s;
         }
-        .star-rating .star.selected,
-        .star-rating:hover .star:hover,
-        .star-rating .star:hover ~ .star {
-            color: #f59e0b; /* amber-500 */
-        }
-        .star-rating:hover .star {
+        /* MODIFICATION: Removed broad hover rules. Color is now only controlled by the 'selected' class from React state. */
+        .star-rating .star.selected {
             color: #f59e0b; /* amber-500 */
         }
     </style>
@@ -162,6 +157,8 @@
       const CheckCircleIcon = (props) => <Icon {...props} C={<><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>} />;
       const AlertCircleIcon = (props) => <Icon {...props} C={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
       const StarIcon = (props) => <Icon {...props} C={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>} />;
+      // MODIFICATION: Added Share icon
+      const Share2Icon = (props) => <Icon {...props} C={<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>} />;
 
       // NEW: Colorful, brand-aligned contact icons
       const NewPhoneIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.02.74-.25 1.02l-2.2 2.2z"/></svg>;
@@ -170,9 +167,9 @@
 
 
       // --- CONFIGURATION ---
-      const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxZHjqJoIwvdsXE_wrr8Dil9vIFvrv9BKe7ZZln8LtkEbOgLcPrzust6K-MSN7NcLZN/exec';
-      // MODIFICATION: Changed feedback trigger count to 2
-      const FEEDBACK_TRIGGER_COUNT = 2; // Show feedback modal after this many generations
+      const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwzracRwkavd08_WcV826q8t8yFhw8n3AYlwM6AjwzfqF89M9G87NCELC9nyOXuXUJ-/exec';
+      // MODIFICATION: Changed feedback trigger count to 3
+      const FEEDBACK_TRIGGER_COUNT = 3; // Show feedback modal after this many generations
 
       const PromptManager = {
         cache: {},
@@ -471,7 +468,7 @@
             }
         }, [chatHistory, activePromptKey]);
 
-        // MODIFICATION: Updated feedback logic to trigger after 2 generations, max twice per 24 hours.
+        // MODIFICATION: Updated feedback logic to trigger after 3 generations, max twice per 24 hours.
         useEffect(() => {
             localStorage.setItem('generationCount', generationCount.toString());
 
@@ -583,23 +580,31 @@
             });
         };
 
-        const handleCopy = (text) => {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-9999px';
-            textArea.focus();
-            textArea.select();
-            try {
-                document.execCommand('copy');
+        const handleShare = async (shareData) => {
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (err) {
+                    console.error("Share failed:", err);
+                    // Fallback for when user cancels share dialog
+                }
+            } else {
+                // Fallback for browsers that don't support Web Share API
+                navigator.clipboard.writeText(shareData.text || shareData.url);
                 setShowCopyToast(true);
                 setTimeout(() => setShowCopyToast(false), 3000);
-            } catch (err) {
+            }
+            setOpenMenuIndex(null);
+        };
+
+        const handleCopy = (text) => {
+            navigator.clipboard.writeText(text).then(() => {
+                setShowCopyToast(true);
+                setTimeout(() => setShowCopyToast(false), 3000);
+            }).catch(err => {
                 console.error('Failed to copy text: ', err);
                 setError("Failed to copy text to clipboard.");
-            }
-            document.body.removeChild(textArea);
+            });
             setOpenMenuIndex(null);
         };
 
@@ -842,9 +847,8 @@
         return (
             <div className="h-full w-full overflow-hidden flex bg-white">
                 {/* --- SIDEBAR / SETTINGS PANEL --- */}
-                {/* MODIFICATION: Added smooth transition for sidebar slide-in/out on mobile */}
-                <div
-                    style={{ width: `${sidebarWidth}px`, maxWidth: '100vw' }}
+                <div 
+                    style={{ width: `${sidebarWidth}px`, maxWidth: '100vw' }} 
                     className={`absolute lg:static top-0 left-0 h-full bg-slate-800 text-white flex flex-col z-40 transition-transform duration-300 ease-in-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
                 >
                     <div className="flex-1 flex flex-col min-h-0">
@@ -914,19 +918,33 @@
                     <header className="p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0 bg-white z-10">
                         <button onClick={() => setIsMenuOpen(true)} className="p-1 text-slate-600 hover:text-slate-900 lg:hidden"><MenuIcon className="w-6 h-6" /></button>
                         <h2 className="text-xl font-semibold text-slate-800 text-center flex-1">{activePromptKey} Assistant</h2>
-                        <button onClick={clearChat} title="Clear chat history and reset" className="p-2 rounded-full hover:bg-slate-200"><TrashIcon className="w-5 h-5 text-slate-500"/></button>
+                        {/* MODIFICATION: Added Share App button */}
+                        <div className="flex items-center gap-2">
+                            <button 
+                                onClick={() => handleShare({
+                                    title: 'AI Educational Assistant',
+                                    text: 'Check out this suite of AI-powered tools for educators!',
+                                    url: window.location.href
+                                })} 
+                                title="Share this app" 
+                                className="p-2 rounded-full hover:bg-slate-200"
+                            >
+                                <Share2Icon className="w-5 h-5 text-slate-500"/>
+                            </button>
+                            <button onClick={clearChat} title="Clear chat history and reset" className="p-2 rounded-full hover:bg-slate-200"><TrashIcon className="w-5 h-5 text-slate-500"/></button>
+                        </div>
                     </header>
 
-                    {/* MODIFICATION: Removed max-w-4xl from inner div to make chat content wider */}
                     <main ref={chatContainerRef} className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 relative">
+                        {/* MODIFICATION: Removed max-width and mx-auto to make chat content wider */}
                         <div className="space-y-6 p-6">
                             {chatHistory.map((msg, index) => (
                                 <div key={index} className={`flex w-full items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                                     {msg.role !== 'user' && (
                                         <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">AI</div>
                                     )}
-                                    {/* MODIFICATION: Removed max-w-[90%] and w-full to let flexbox handle widths */}
-                                    <div className={`p-4 rounded-lg ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
+                                    {/* MODIFICATION: Adjusted classes for better width handling */}
+                                    <div className={`p-4 rounded-lg flex-grow-0 ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
                                         {msg.file && (
                                             <div className="mb-2 p-2 bg-indigo-500 rounded-md inline-block">
                                                 {msg.file.previewUrl ? <img src={msg.file.previewUrl} className="max-w-xs rounded-md"/> : <div className="flex items-center gap-2 p-2"><FileIcon className="w-6 h-6"/><span>{msg.file.name}</span></div>}
@@ -952,6 +970,14 @@
                                                         <CopyIcon className="w-4 h-4" />
                                                         <span>Copy</span>
                                                     </button>
+                                                    {/* MODIFICATION: Added Share button for AI response */}
+                                                    <button
+                                                        onClick={() => handleShare({ title: 'AI Assistant Response', text: msg.content })}
+                                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                                                    >
+                                                        <Share2Icon className="w-4 h-4" />
+                                                        <span>Share</span>
+                                                    </button>
                                                 </div>
                                             )}
                                         </div>
@@ -969,7 +995,8 @@
                     {error && <div className="p-4 bg-red-100 text-red-700 border-t border-red-200 flex-shrink-0">{error}</div>}
 
                     <footer className="p-4 border-t border-slate-200 bg-white flex-shrink-0">
-                        <div className="relative max-w-4xl mx-auto">
+                        {/* MODIFICATION: Removed max-width to allow input to span wider */}
+                        <div className="relative mx-auto">
                             {pendingFile && <div className="absolute bottom-full left-0 mb-2 max-w-md p-2"><div className="flex items-start gap-2 bg-slate-200 text-slate-700 rounded-lg p-2 text-sm">
                                 {pendingFilePreview ? <img src={pendingFilePreview} alt="Preview" className="w-16 h-16 object-cover rounded-md"/> : <FileIcon className="w-12 h-12 text-slate-500 shrink-0"/>}
                                 <div className="flex-grow"><p className="font-semibold">File attached:</p><p className="text-xs break-all">{pendingFile.name}</p></div>
