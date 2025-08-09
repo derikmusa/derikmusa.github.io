@@ -60,11 +60,11 @@
         .markdown-content ul { list-style-type: disc; } .markdown-content ol { list-style-type: decimal; }
         .markdown-content li { margin-bottom: 0.25rem; }
 
-        /* MODIFICATION: This is the primary fix for tables on all devices. */
+        /* MODIFICATION: Table styling for responsiveness */
         .markdown-content table {
-            display: block; /* Important for overflow to work */
+            display: block; /* Required for overflow scrolling */
             width: 100%;
-            overflow-x: auto; /* This enables horizontal scrolling */
+            overflow-x: auto; /* Enable horizontal scrolling ONLY for the table */
             border-collapse: collapse;
             margin-bottom: 1rem;
             -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
@@ -72,7 +72,8 @@
         .markdown-content th, .markdown-content td {
             border: 1px solid #d1d5db;
             padding: 0.5rem 0.75rem;
-            white-space: nowrap; /* Prevents text from wrapping to the next line, forcing the table to be wide */
+            white-space: normal; /* MODIFICATION: Allow text to wrap */
+            word-break: break-word; /* MODIFICATION: Break long words to prevent overflow */
         }
         .markdown-content th { background-color: #f3f4f6; font-weight: 600; }
 
@@ -136,7 +137,6 @@
             color: #d1d5db; /* gray-400 */
             transition: color 0.2s;
         }
-        /* MODIFICATION: Corrected star rating hover logic. */
         .star-rating .star.hover,
         .star-rating .star.selected {
             color: #f59e0b; /* amber-500 */
@@ -312,7 +312,6 @@
                             <div className="flex justify-center items-center mb-6 star-rating" onMouseLeave={() => setHoverRating(0)}>
                                 {[1, 2, 3, 4, 5].map(star => (
                                     <div key={star} onMouseEnter={() => setHoverRating(star)} onClick={() => setRating(star)}>
-                                        {/* MODIFICATION: Corrected star classes for proper hover effect */}
                                         <StarIcon className={`w-10 h-10 star ${(hoverRating >= star) ? 'hover' : ''} ${rating >= star ? 'selected' : ''}`} style={{fill: 'currentColor'}}/>
                                     </div>
                                 ))}
@@ -479,7 +478,6 @@
             }
         }, [chatHistory, activePromptKey]);
 
-        // MODIFICATION: Updated feedback logic to trigger after 3 generations, max twice per 24 hours.
         useEffect(() => {
             localStorage.setItem('generationCount', generationCount.toString());
 
@@ -950,7 +948,7 @@
                                     {msg.role !== 'user' && (
                                         <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">AI</div>
                                     )}
-                                    <div className={`p-4 rounded-lg max-w-full overflow-hidden ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
+                                    <div className={`p-4 rounded-lg max-w-full overflow-x-auto ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
                                         {msg.file && (
                                             <div className="mb-2 p-2 bg-indigo-500 rounded-md inline-block">
                                                 {msg.file.previewUrl ? <img src={msg.file.previewUrl} className="max-w-xs rounded-md"/> : <div className="flex items-center gap-2 p-2"><FileIcon className="w-6 h-6"/><span>{msg.file.name}</span></div>}
