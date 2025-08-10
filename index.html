@@ -43,10 +43,11 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Base styles */
+        /* Base styles for mobile keyboard handling */
         html, body, #root { height: 100%; }
-        body { font-family: 'Inter', sans-serif; overflow-x: hidden; } /* Prevent body scroll */
-        #root { overflow-y: auto; } /* Allow root to scroll if needed */
+        body { font-family: 'Inter', sans-serif; overflow: hidden; }
+        #root { display: flex; flex-direction: column; }
+
         /* Custom scrollbar for a cleaner look */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -60,19 +61,18 @@
         .markdown-content ul { list-style-type: disc; } .markdown-content ol { list-style-type: decimal; }
         .markdown-content li { margin-bottom: 0.25rem; }
 
-        /* CHANGE 1: TABLE FIX */
+        /* Table styling for horizontal scroll */
         .markdown-content table {
-            display: block; /* Important for overflow to work */
+            display: block;
             width: 100%;
-            overflow-x: auto; /* This enables horizontal scrolling */
+            overflow-x: auto;
             border-collapse: collapse;
             margin-bottom: 1rem;
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+            -webkit-overflow-scrolling: touch;
         }
         .markdown-content th, .markdown-content td {
             border: 1px solid #d1d5db;
             padding: 0.5rem 0.75rem;
-            /* REMOVED 'white-space: nowrap;' to allow text wrapping */
         }
         .markdown-content th { background-color: #f3f4f6; font-weight: 600; }
 
@@ -151,6 +151,7 @@
       // --- SVG ICONS ---
       const Icon = ({ C, ...props }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>{C}</svg>;
       const SendIcon = (props) => <Icon {...props} C={<><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></>} />;
+      const StopIcon = (props) => <Icon {...props} C={<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />} />;
       const PaperclipIcon = (props) => <Icon {...props} C={<><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.59a2 2 0 0 1-2.83-2.83l8.49-8.48"/></>} />;
       const FileIcon = (props) => <Icon {...props} C={<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></>} />;
       const XIcon = (props) => <Icon {...props} C={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />;
@@ -166,6 +167,8 @@
       const AlertCircleIcon = (props) => <Icon {...props} C={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
       const StarIcon = (props) => <Icon {...props} C={<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>} />;
       const Share2Icon = (props) => <Icon {...props} C={<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>} />;
+      const RefreshCwIcon = (props) => <Icon {...props} C={<><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></>} />;
+      const SettingsIcon = (props) => <Icon {...props} C={<path d="M12.22 2h-4.44l-2 6-6 2 2 6 6 2 2-6 6-2-2-6zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>} />;
       const NewPhoneIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.02.74-.25 1.02l-2.2 2.2z"/></svg>;
       const NewEnvelopeIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>;
       const NewWhatsAppIcon = (props) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#25D366" {...props}><path d="M19.11 4.9a9.88 9.88 0 0 0-14.22 0 9.88 9.88 0 0 0 0 14.22l-2.09 2.09 2.23 2.23 2.09-2.09a9.88 9.88 0 0 0 14.22 0c3.89-3.89 3.89-10.33 0-14.22zM12 19.94a7.94 7.94 0 0 1-6.4-12.84l.09-.09.09-.09a7.94 7.94 0 0 1 12.62 0l.09.09.09.09A7.94 7.94 0 0 1 12 19.94zm-1.1-6.61h-2.26v-1.5h2.26v-2.26h1.5v2.26h2.26v1.5h-2.26v2.26h-1.5z"/></svg>;
@@ -230,17 +233,30 @@
       ];
 
       // --- COMPONENTS ---
-      const MarkdownRenderer = ({ content, isLoading }) => {
-          if (isLoading && !content) {
-              return (
-                  <div className="flex items-center gap-2 text-slate-500">
-                      <div className="loading-spinner"></div>
-                      <span>AI is thinking...</span>
-                  </div>
-              )
-          }
-          const html = marked.parse(content || '');
-          return <div className="markdown-content" dangerouslySetInnerHTML={{ __html: html + (isLoading ? '<span class="blinking-cursor"></span>' : '') }} />;
+      const MarkdownRenderer = ({ htmlContent, isLoading }) => {
+          const contentRef = useRef(null);
+
+          useEffect(() => {
+              if (contentRef.current) {
+                  const tables = contentRef.current.querySelectorAll('table');
+                  tables.forEach(table => {
+                      const existingGuide = table.nextElementSibling;
+                      if (existingGuide && existingGuide.classList.contains('scroll-guide')) {
+                          existingGuide.remove();
+                      }
+
+                      if (table.scrollWidth > table.clientWidth) {
+                          const guide = document.createElement('p');
+                          guide.innerHTML = '<em>&laquo;&mdash; Scroll left and right to view more content &mdash;&raquo;</em>';
+                          guide.className = 'text-center text-slate-500 text-sm mt-1 scroll-guide italic';
+                          table.parentNode.insertBefore(guide, table.nextSibling);
+                      }
+                  });
+              }
+          }, [htmlContent, isLoading]);
+
+          const finalHtml = htmlContent + (isLoading ? '<span class="blinking-cursor"></span>' : '');
+          return <div ref={contentRef} className="markdown-content p-4" dangerouslySetInnerHTML={{ __html: finalHtml }} />;
       };
 
       const FeedbackModal = ({ isOpen, onClose, onSubmit, assistantName }) => {
@@ -354,6 +370,76 @@
             </div>
         );
       };
+      
+      const MessageMenu = ({ msg, index, onCopy, onShare, onDelete, onRegenerate }) => {
+        const [isOpen, setIsOpen] = useState(false);
+        const menuRef = useRef(null);
+
+        useEffect(() => {
+            const handleClickOutside = (event) => {
+                if (menuRef.current && !menuRef.current.contains(event.target)) {
+                    setIsOpen(false);
+                }
+            };
+            document.addEventListener("mousedown", handleClickOutside);
+            return () => document.removeEventListener("mousedown", handleClickOutside);
+        }, [menuRef]);
+
+        // Don't render the menu for a message that is still loading
+        if (msg.isLoading) return null;
+
+        // CSS classes to position the menu correctly to avoid screen cutoff.
+        // For user messages (on the right), the menu opens left (right-0).
+        // For AI messages (on the left), the menu also opens left (right-0).
+        const menuPositionClass = msg.role === 'user' ? 'right-0' : 'right-0';
+
+        return (
+            <div className="relative" ref={menuRef}>
+                <button
+                    onClick={() => setIsOpen(prev => !prev)}
+                    className="p-2 rounded-full hover:bg-slate-200 text-slate-500"
+                    title="Options"
+                >
+                    <MoreVerticalIcon className="w-5 h-5" />
+                </button>
+                {isOpen && (
+                    <div className={`absolute ${menuPositionClass} mt-2 w-48 bg-white rounded-md shadow-lg z-20 border border-slate-200`}>
+                        <button
+                            onClick={() => { onCopy(msg.content); setIsOpen(false); }}
+                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                            <CopyIcon className="w-4 h-4" />
+                            <span>Copy Message</span>
+                        </button>
+                        <button
+                            onClick={() => { onShare({ title: 'AI Assistant Response', text: msg.content }); setIsOpen(false); }}
+                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                            <Share2Icon className="w-4 h-4" />
+                            <span>Share Message</span>
+                        </button>
+                        {msg.role === 'assistant' && (
+                            <button
+                                onClick={() => { onRegenerate(index); setIsOpen(false); }}
+                                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                            >
+                                <RefreshCwIcon className="w-4 h-4" />
+                                <span>Regenerate</span>
+                            </button>
+                        )}
+                        <div className="border-t border-slate-100 my-1"></div>
+                        <button
+                            onClick={() => { onDelete(index); setIsOpen(false); }}
+                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                            <TrashIcon className="w-4 h-4" />
+                            <span>Delete Message</span>
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+      };
 
       function App() {
         // --- STATE MANAGEMENT ---
@@ -378,11 +464,11 @@
         const [availableAssistants, setAvailableAssistants] = useState([]);
         const [isLoadingAssistants, setIsLoadingAssistants] = useState(true);
         const [navigationMenu, setNavigationMenu] = useState({});
-        const [openMenuIndex, setOpenMenuIndex] = useState(null);
         const [showCopyToast, setShowCopyToast] = useState(false);
         const [apiKeyToast, setApiKeyToast] = useState('');
         const [generationCount, setGenerationCount] = useState(0);
         const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+        const [showResetConfirm, setShowResetConfirm] = useState(false);
 
 
         // --- REFS ---
@@ -391,6 +477,7 @@
         const userInputRef = useRef(null);
         const validationTimeoutRef = useRef(null);
         const apiKeyToastTimeoutRef = useRef(null);
+        const abortControllerRef = useRef(null);
 
         // --- DERIVED STATE ---
         const selectedProvider = AI_PROVIDERS.find(p => p.key === selectedProviderKey);
@@ -452,7 +539,7 @@
                         const intro = promptJson?.interaction_flow?.introduction_message?.display_text;
                         if (intro) finalMessage = intro.replace(/\\n/g, '\n');
                     } catch(e) { /* Not JSON, use default */ }
-                    setChatHistory([{ role: 'assistant', content: finalMessage }]);
+                    setChatHistory([{ role: 'assistant', content: finalMessage, id: Date.now() }]);
                 }
             };
 
@@ -592,10 +679,8 @@
                 setShowCopyToast(true);
                 setTimeout(() => setShowCopyToast(false), 3000);
             }
-            setOpenMenuIndex(null);
         };
 
-        // CHANGE 3: UPGRADED COPY FUNCTION
         const handleCopy = (text) => {
             const attributionText = "\n\n---\nGenerated by the CBC AI Educational Assistant\nCreated by Derrick Musamali | Visit: https://cbc-ai-tool.netlify.app/";
             const textToCopy = text + attributionText;
@@ -606,46 +691,26 @@
                 console.error('Failed to copy text: ', err);
                 setError("Failed to copy text to clipboard.");
             });
-            setOpenMenuIndex(null);
         };
 
-        const handleSendMessage = async () => {
+        const handleDeleteMessage = (indexToDelete) => {
+            setChatHistory(prev => prev.filter((_, index) => index !== indexToDelete));
+        };
+
+        const handleStopGeneration = () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+        
+        const fetchAndStreamResponse = async ({ historyForApi, systemPrompt, onUpdate, onComplete, onError }) => {
             const apiKey = apiKeys[selectedProvider.apiKeyName];
-            if ((!userInput.trim() && !pendingFile) || isLoading) return;
             if (!apiKey || apiKeyStatus[selectedProvider.key] !== 'valid') {
-                setError(`Please enter a valid ${selectedProvider.label} API Key in the settings panel.`);
-                setIsMenuOpen(true);
+                onError(`Please enter a valid ${selectedProvider.label} API Key in the settings panel.`);
                 return;
             }
 
-            setIsLoading(true);
-            setError('');
-
-            let fileDataForApi = null;
-            if (pendingFile && !isFileUploadDisabled) {
-                try {
-                    fileDataForApi = await processFileForApi(pendingFile);
-                } catch(e) {
-                    setError("Could not read file.");
-                    setIsLoading(false);
-                    return;
-                }
-            }
-
-            const userMessage = { role: 'user', content: userInput, file: pendingFile ? { name: pendingFile.name, previewUrl: pendingFilePreview } : null, fileDataForApi };
-            const newHistory = [...chatHistory, userMessage, { role: 'assistant', content: '', isLoading: true }];
-            setChatHistory(newHistory);
-            setUserInput(''); setPendingFile(null); setPendingFilePreview(null);
-
-            let systemPrompt = activePromptKey === 'custom' ? customPromptContent : await PromptManager.getPromptContent(activePromptKey);
-            if (!systemPrompt) {
-                setError('Failed to load assistant configuration. Please try again.');
-                setChatHistory(prev => prev.slice(0, -1));
-                setIsLoading(false);
-                return;
-            }
-
-            const historyForApi = newHistory.slice(0, -1);
+            abortControllerRef.current = new AbortController();
 
             try {
                 let requestUrl, requestHeaders, requestBody;
@@ -686,7 +751,7 @@
                     });
                 }
 
-                const response = await fetch(requestUrl, { method: 'POST', headers: requestHeaders, body: requestBody });
+                const response = await fetch(requestUrl, { method: 'POST', headers: requestHeaders, body: requestBody, signal: abortControllerRef.current.signal });
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
                     throw new Error(errData.error?.message || `API request failed with status ${response.status}`);
@@ -697,6 +762,8 @@
                 let buffer = '';
 
                 while (true) {
+                    if (abortControllerRef.current.signal.aborted) break;
+                    
                     const { done, value } = await reader.read();
                     if (done) break;
                     buffer += decoder.decode(value, { stream: true });
@@ -714,14 +781,7 @@
                                 else textChunk = data.choices?.[0]?.delta?.content || data.delta?.text || '';
 
                                 if (textChunk) {
-                                    setChatHistory(prev => {
-                                        const newHistory = [...prev];
-                                        const lastMsg = newHistory[newHistory.length - 1];
-                                        if (lastMsg) {
-                                            lastMsg.content += textChunk;
-                                        }
-                                        return newHistory;
-                                    });
+                                    onUpdate(textChunk);
                                  }
                             } catch (e) { /* Ignore parsing errors */ }
                         }
@@ -729,21 +789,143 @@
                 }
 
             } catch (err) {
-                setError(err.message);
-                setChatHistory(prev => prev.slice(0, -1));
+                if (err.name !== 'AbortError') {
+                    onError(err.message);
+                }
             } finally {
-                setChatHistory(prev => {
-                    const newHistory = [...prev];
-                    const lastMsg = newHistory[newHistory.length - 1];
-                    if (lastMsg) {
-                        lastMsg.isLoading = false;
-                    }
-                    return newHistory;
-                });
-                setIsLoading(false);
-                setGenerationCount(prevCount => prevCount + 1);
+                onComplete();
             }
         };
+
+        const handleSendMessage = async () => {
+            if ((!userInput.trim() && !pendingFile) || isLoading) return;
+            
+            setIsLoading(true);
+            setError('');
+            
+            let fileDataForApi = null;
+            if (pendingFile && !isFileUploadDisabled) {
+                try {
+                    fileDataForApi = await processFileForApi(pendingFile);
+                } catch(e) {
+                    setError("Could not read file.");
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
+            const userMessage = { role: 'user', content: userInput, file: pendingFile ? { name: pendingFile.name, previewUrl: pendingFilePreview } : null, fileDataForApi, id: Date.now() };
+            const assistantPlaceholder = { role: 'assistant', content: '', isLoading: true, id: Date.now() + 1 };
+            
+            const newHistory = [...chatHistory, userMessage, assistantPlaceholder];
+            setChatHistory(newHistory);
+            setUserInput(''); setPendingFile(null); setPendingFilePreview(null);
+
+            const systemPrompt = activePromptKey === 'custom' ? customPromptContent : await PromptManager.getPromptContent(activePromptKey);
+            if (!systemPrompt) {
+                setError('Failed to load assistant configuration. Please try again.');
+                setChatHistory(prev => prev.slice(0, -2));
+                setIsLoading(false);
+                return;
+            }
+
+            await fetchAndStreamResponse({
+                historyForApi: newHistory.slice(0, -1),
+                systemPrompt,
+                onUpdate: (chunk) => {
+                    setChatHistory(prev => {
+                        const updatedHistory = [...prev];
+                        const lastMsg = updatedHistory[updatedHistory.length - 1];
+                        if (lastMsg && lastMsg.isLoading) {
+                            lastMsg.content += chunk;
+                        }
+                        return updatedHistory;
+                    });
+                },
+                onComplete: () => {
+                    setIsLoading(false);
+                    setChatHistory(prev => {
+                        const updatedHistory = [...prev];
+                        const lastMsg = updatedHistory[updatedHistory.length - 1];
+                        if (lastMsg) lastMsg.isLoading = false;
+                        return updatedHistory;
+                    });
+                    if (!abortControllerRef.current.signal.aborted) {
+                        setGenerationCount(prevCount => prevCount + 1);
+                    }
+                    abortControllerRef.current = null;
+                },
+                onError: (err) => {
+                    setError(err);
+                    setChatHistory(prev => prev.slice(0, -2));
+                    setIsLoading(false);
+                }
+            });
+        };
+        
+        const handleRegenerate = async (indexToRegenerate) => {
+            if (isLoading) return;
+
+            const historyForApi = chatHistory.slice(0, indexToRegenerate);
+            if (historyForApi.length === 0 || historyForApi[historyForApi.length - 1].role !== 'user') {
+                setError("Cannot regenerate without a preceding user prompt.");
+                return;
+            }
+
+            setIsLoading(true);
+            setError('');
+
+            setChatHistory(prev => {
+                const updatedHistory = [...prev];
+                const msgToUpdate = updatedHistory[indexToRegenerate];
+                if(msgToUpdate) {
+                    msgToUpdate.content = '';
+                    msgToUpdate.isLoading = true;
+                }
+                return updatedHistory;
+            });
+
+            const systemPrompt = activePromptKey === 'custom' ? customPromptContent : await PromptManager.getPromptContent(activePromptKey);
+            
+            await fetchAndStreamResponse({
+                historyForApi,
+                systemPrompt,
+                onUpdate: (chunk) => {
+                    setChatHistory(prev => {
+                        const updatedHistory = [...prev];
+                        const msgToUpdate = updatedHistory[indexToRegenerate];
+                        if (msgToUpdate && msgToUpdate.isLoading) {
+                            msgToUpdate.content += chunk;
+                        }
+                        return updatedHistory;
+                    });
+                },
+                onComplete: () => {
+                    setIsLoading(false);
+                     setChatHistory(prev => {
+                        const updatedHistory = [...prev];
+                        const msgToUpdate = updatedHistory[indexToRegenerate];
+                        if (msgToUpdate) msgToUpdate.isLoading = false;
+                        return updatedHistory;
+                    });
+                    if (!abortControllerRef.current.signal.aborted) {
+                        setGenerationCount(prevCount => prevCount + 1);
+                    }
+                    abortControllerRef.current = null;
+                },
+                onError: (err) => {
+                    setError(err);
+                    setIsLoading(false);
+                    // Revert the message to its original state on error
+                    setChatHistory(prev => {
+                        const updatedHistory = [...prev];
+                        updatedHistory[indexToRegenerate] = chatHistory[indexToRegenerate];
+                        return updatedHistory;
+                    });
+                }
+            });
+        };
+
 
         const handleProviderChange = (e) => {
             const newProviderKey = e.target.value;
@@ -768,22 +950,12 @@
                 setCustomPromptContent(text);
                 setActivePromptKey('custom');
                 setIsPromptMissing(false);
-                setChatHistory([{ role: 'assistant', content: 'Custom prompt loaded. How can I assist?' }]);
+                setChatHistory([{ role: 'assistant', content: 'Custom prompt loaded. How can I assist?', id: Date.now() }]);
             } catch (err) { setError('Could not read custom prompt file.'); }
         };
 
         const handlePromptSelectionChange = (e) => {
             if (e.target.value) {
-                try {
-                    const url = new URL(e.target.value, window.location.origin);
-                    const newAssistantKey = url.searchParams.get('assistant');
-                    if (newAssistantKey) {
-                        const chatKey = `chatHistory_${newAssistantKey}`;
-                        localStorage.removeItem(chatKey);
-                    }
-                } catch (error) {
-                    console.error("Could not parse URL from selection:", e.target.value, error);
-                }
                 window.location.href = e.target.value;
             }
         };
@@ -791,10 +963,24 @@
         const clearChat = () => {
             const chatKey = `chatHistory_${activePromptKey}`;
             localStorage.removeItem(chatKey);
+            setChatHistory(prev => prev.filter(msg => msg.role !== 'user' && msg.role !== 'assistant')); // Keep initial prompt
+            setPendingFile(null);
+            setPendingFilePreview(null);
+            setError('');
+            // Reload to get the initial prompt message back
+            window.location.reload();
+        };
+        
+        const resetSettings = () => {
+            localStorage.removeItem('aiAssistantState');
             localStorage.removeItem('generationCount');
             localStorage.removeItem('feedbackTimestamps');
-            setGenerationCount(0);
-            setPendingFile(null); setPendingFilePreview(null); setError('');
+            // Also clear all chat histories
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('chatHistory_')) {
+                    localStorage.removeItem(key);
+                }
+            });
             window.location.reload();
         };
 
@@ -846,7 +1032,7 @@
         }
 
         return (
-            <div className="h-full w-full overflow-hidden flex bg-white">
+            <div className="h-screen w-screen overflow-hidden flex bg-white">
                 {/* --- SIDEBAR / SETTINGS PANEL --- */}
                 <div
                     style={{ width: `${sidebarWidth}px`, maxWidth: '100vw' }}
@@ -894,6 +1080,23 @@
                                 <a href={selectedProvider?.apiKeyUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-400 hover:underline mt-1 block">Get your key here &raquo;</a>
                             </div>
                             <div><label className="text-sm text-slate-400">Auto-delete Chat</label><select value={autoDeleteHours} onChange={(e) => setAutoDeleteHours(e.target.value)} className="w-full mt-1 p-2 bg-slate-700 border border-slate-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"><option value="1">After 1 Hour</option><option value="2">After 2 Hours</option><option value="24">After 24 Hours</option><option value="never">Never</option></select></div>
+                             <div>
+                                <label className="text-sm text-slate-400">App Settings</label>
+                                {showResetConfirm ? (
+                                    <div className="mt-1 p-2 bg-red-900/50 border border-red-500 rounded-md text-center">
+                                        <p className="text-sm mb-2">Are you sure? This will clear all API keys and settings.</p>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => setShowResetConfirm(false)} className="w-full text-xs py-1 bg-slate-600 hover:bg-slate-500 rounded">Cancel</button>
+                                            <button onClick={resetSettings} className="w-full text-xs py-1 bg-red-600 hover:bg-red-500 rounded">Confirm Reset</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => setShowResetConfirm(true)} className="w-full mt-1 p-2 bg-red-800 hover:bg-red-700 text-white rounded-md transition-colors flex items-center justify-center gap-2">
+                                        <SettingsIcon className="w-5 h-5"/>
+                                        <span>Reset App Settings</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                         <div className="p-4 mt-auto space-y-3 flex-shrink-0 border-t border-slate-700">
                              <p className="text-sm text-slate-400 text-center">A Project by Derrick Musamali</p>
@@ -915,7 +1118,7 @@
                 </div>
 
                 {/* --- MAIN CHAT INTERFACE --- */}
-                <div className="flex-1 flex flex-col h-full overflow-hidden">
+                <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
                     <header className="p-4 border-b border-slate-200 flex justify-between items-center flex-shrink-0 bg-white z-10">
                         <button onClick={() => setIsMenuOpen(true)} className="p-1 text-slate-600 hover:text-slate-900 lg:hidden"><MenuIcon className="w-6 h-6" /></button>
                         <h2 className="text-xl font-semibold text-slate-800 text-center flex-1">{activePromptKey} Assistant</h2>
@@ -931,53 +1134,33 @@
                             >
                                 <Share2Icon className="w-5 h-5 text-slate-500"/>
                             </button>
-                            <button onClick={clearChat} title="Clear chat history and reset" className="p-2 rounded-full hover:bg-slate-200"><TrashIcon className="w-5 h-5 text-slate-500"/></button>
+                            <button onClick={clearChat} title="Clear chat messages" className="p-2 rounded-full hover:bg-slate-200"><TrashIcon className="w-5 h-5 text-slate-500"/></button>
                         </div>
                     </header>
 
-                    <main ref={chatContainerRef} className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 relative">
-                        {/* CHANGE 2: FULL-WIDTH PADDING ON MOBILE */}
-                        <div className="px-2 py-6 sm:p-6 space-y-6">
+                    <main ref={chatContainerRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
+                        <div className="p-2 sm:p-6 space-y-4">
                             {chatHistory.map((msg, index) => (
-                                <div key={index} className={`flex w-full items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                                <div key={msg.id || index} className={`flex w-full items-start gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                                    {msg.role === 'user' && (
+                                        <div className="self-center">
+                                            <MessageMenu msg={msg} index={index} onCopy={handleCopy} onShare={handleShare} onDelete={handleDeleteMessage} onRegenerate={handleRegenerate} />
+                                        </div>
+                                    )}
                                     {msg.role !== 'user' && (
                                         <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm shrink-0">AI</div>
                                     )}
-                                    <div className={`p-4 rounded-lg max-w-full overflow-hidden ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
+                                    <div className={`rounded-lg w-full md:w-auto max-w-full overflow-hidden flex flex-col ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200'}`}>
                                         {msg.file && (
-                                            <div className="mb-2 p-2 bg-indigo-500 rounded-md inline-block">
+                                            <div className="p-2 bg-indigo-500/80">
                                                 {msg.file.previewUrl ? <img src={msg.file.previewUrl} className="max-w-xs rounded-md"/> : <div className="flex items-center gap-2 p-2"><FileIcon className="w-6 h-6"/><span>{msg.file.name}</span></div>}
                                             </div>
                                         )}
-                                        <MarkdownRenderer content={msg.content} isLoading={msg.isLoading} />
+                                        <MarkdownRenderer htmlContent={marked.parse(msg.content || '')} isLoading={msg.isLoading} />
                                     </div>
-                                    {msg.role === 'assistant' && !msg.isLoading && msg.content && (
-                                        <div className="relative">
-                                            <button
-                                                onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
-                                                className="p-2 rounded-full hover:bg-slate-200 text-slate-500"
-                                                title="Options"
-                                            >
-                                                <MoreVerticalIcon className="w-5 h-5" />
-                                            </button>
-                                            {openMenuIndex === index && (
-                                                <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-20 border border-slate-200">
-                                                    <button
-                                                        onClick={() => handleCopy(msg.content)}
-                                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                                    >
-                                                        <CopyIcon className="w-4 h-4" />
-                                                        <span>Copy</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleShare({ title: 'AI Assistant Response', text: msg.content })}
-                                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                                                    >
-                                                        <Share2Icon className="w-4 h-4" />
-                                                        <span>Share</span>
-                                                    </button>
-                                                </div>
-                                            )}
+                                    {msg.role !== 'user' && (
+                                        <div className="self-center">
+                                            <MessageMenu msg={msg} index={index} onCopy={handleCopy} onShare={handleShare} onDelete={handleDeleteMessage} onRegenerate={handleRegenerate} />
                                         </div>
                                     )}
                                 </div>
@@ -993,13 +1176,13 @@
                     {error && <div className="p-4 bg-red-100 text-red-700 border-t border-red-200 flex-shrink-0">{error}</div>}
 
                     <footer className="p-4 border-t border-slate-200 bg-white flex-shrink-0">
-                        <div className="relative mx-auto">
+                        <div className="relative mx-auto max-w-4xl">
                             {pendingFile && <div className="absolute bottom-full left-0 mb-2 max-w-md p-2"><div className="flex items-start gap-2 bg-slate-200 text-slate-700 rounded-lg p-2 text-sm">
                                 {pendingFilePreview ? <img src={pendingFilePreview} alt="Preview" className="w-16 h-16 object-cover rounded-md"/> : <FileIcon className="w-12 h-12 text-slate-500 shrink-0"/>}
                                 <div className="flex-grow"><p className="font-semibold">File attached:</p><p className="text-xs break-all">{pendingFile.name}</p></div>
                                 <button onClick={() => {setPendingFile(null); setPendingFilePreview(null);}} className="p-1 rounded-full hover:bg-slate-300 shrink-0"><XIcon className="w-4 h-4" /></button>
                             </div></div>}
-                            <div className="flex items-end gap-4">
+                            <div className="flex items-end gap-2 sm:gap-4">
                                 <label htmlFor="file-upload" title={isFileUploadDisabled ? "File upload not supported by this model" : "Attach File"} className={`p-3 rounded-full hover:bg-slate-100 self-end ${isFileUploadDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}><PaperclipIcon className="w-6 h-6 text-slate-600"/></label>
                                 <input id="file-upload" type="file" className="hidden" onChange={handleFileSelect} disabled={isFileUploadDisabled}/>
                                 <textarea
@@ -1017,8 +1200,8 @@
                                     className="flex-1 p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none overflow-y-auto max-h-48"
                                     rows="1"
                                 />
-                                <button onClick={handleSendMessage} disabled={isLoading} className="p-3 rounded-full bg-indigo-600 text-white disabled:bg-slate-300 transition-colors hover:bg-indigo-700 self-end">
-                                    {isLoading ? <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <SendIcon className="w-6 h-6"/>}
+                                <button onClick={isLoading ? handleStopGeneration : handleSendMessage} disabled={!isLoading && !userInput.trim() && !pendingFile} className="p-3 rounded-full bg-indigo-600 text-white disabled:bg-slate-300 transition-colors hover:bg-indigo-700 self-end">
+                                    {isLoading ? <StopIcon className="w-6 h-6"/> : <SendIcon className="w-6 h-6"/>}
                                 </button>
                             </div>
                         </div>
