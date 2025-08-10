@@ -1,0 +1,147 @@
+/*
+ * style.css
+ * This file contains all the custom CSS rules for the AI Educational Assistant.
+ * Keeping styles separate from the HTML structure and JavaScript logic
+ * makes the project cleaner and easier to maintain.
+*/
+
+/* Base styles for mobile keyboard handling and layout */
+html, body, #root { 
+    height: 100%; 
+}
+body { 
+    font-family: 'Inter', sans-serif; 
+    overflow: hidden; /* Prevents the main body from scrolling */
+}
+#root { 
+    display: flex; 
+    flex-direction: column; /* Main layout structure for the React app */
+}
+
+/* Custom scrollbar for a cleaner look across the app */
+.custom-scrollbar::-webkit-scrollbar { 
+    width: 6px; 
+    height: 6px; 
+}
+.custom-scrollbar::-webkit-scrollbar-track { 
+    background: #f1f5f9; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb { 
+    background: #94a3b8; 
+    border-radius: 3px;
+}
+
+/* Markdown content styling for AI responses */
+.markdown-content h1, .markdown-content h2, .markdown-content h3 { 
+    font-weight: 600; 
+    margin-top: 1rem; 
+    margin-bottom: 0.5rem; 
+}
+.markdown-content h1 { font-size: 1.5em; } 
+.markdown-content h2 { font-size: 1.25em; } 
+.markdown-content h3 { font-size: 1.1em; }
+.markdown-content p { margin-bottom: 0.75rem; }
+.markdown-content ul, .markdown-content ol { 
+    margin-left: 1.5rem; 
+    margin-bottom: 0.75rem; 
+}
+.markdown-content ul { list-style-type: disc; } 
+.markdown-content ol { list-style-type: decimal; }
+.markdown-content li { margin-bottom: 0.25rem; }
+
+/* Table styling for horizontal scrolling on smaller screens */
+.markdown-content table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+.markdown-content th, .markdown-content td {
+    border: 1px solid #d1d5db;
+    padding: 0.5rem 0.75rem;
+}
+.markdown-content th { 
+    background-color: #f3f4f6; 
+    font-weight: 600; 
+}
+
+.markdown-content blockquote { 
+    border-left: 4px solid #d1d5db; 
+    padding-left: 1rem; 
+    margin-left: 0; 
+    color: #4b5563; 
+}
+.markdown-content code { 
+    background-color: #e5e7eb; 
+    padding: 0.125rem 0.25rem; 
+    border-radius: 0.25rem; 
+    font-family: monospace; 
+}
+.markdown-content pre > code { 
+    display: block; 
+    padding: 0.75rem; 
+    white-space: pre-wrap; 
+}
+
+/* Blinking cursor for streaming effect */
+.blinking-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1.2rem;
+    background-color: #4f46e5;
+    animation: blink 1s step-end infinite;
+    vertical-align: bottom;
+}
+@keyframes blink {
+    from, to { background-color: transparent }
+    50% { background-color: #4f46e5; }
+}
+
+/* Loading spinner for API calls */
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #4f46e5;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Auto-resizing textarea in the footer */
+textarea#chat-input {
+    min-height: 48px;
+    height: 48px;
+}
+
+/* Resizable sidebar handle */
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    background-color: transparent;
+    z-index: 50;
+}
+.resize-handle:hover {
+    background-color: #4f46e5;
+}
+
+/* Star rating styles for the feedback modal */
+.star-rating .star {
+    cursor: pointer;
+    color: #d1d5db; /* gray-400 */
+    transition: color 0.2s;
+}
+.star-rating .star.hover,
+.star-rating .star.selected {
+    color: #f59e0b; /* amber-500 */
+}
